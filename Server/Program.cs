@@ -51,6 +51,12 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Configurar Services
+
+builder.Services.AddScoped<JwtService>();
+
+builder.Services.AddScoped<UserService>();
+
 // Configurar autorización
 builder.Services.AddAuthorization(options =>
 {
