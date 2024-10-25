@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Server.Data;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+
 
 namespace Server.Controllers
 {
@@ -13,12 +10,12 @@ namespace Server.Controllers
     public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-        private readonly IConfiguration _configuration;
+        private readonly JwtService _jwtService;
 
-        public AuthController(ApplicationDbContext context, IConfiguration configuration)
+        public AuthController(ApplicationDbContext context, JwtService jwtService)
         {
             _context = context;
-            _configuration = configuration;
+            _jwtService = jwtService;
         }
 
         [HttpPost("login")]
@@ -27,15 +24,14 @@ namespace Server.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDto.Email);
 
             if (user == null || user.PasswordHash != loginDto.Password)
             {
                 return Unauthorized(new { message = "Credenciales inválidas." });
             }
-
-            var token = GenerateJwtToken(user);
+            
+            var token = _jwtService.GenerateJwtToken(user);
 
             var authResponse = new AuthResponseDto
             {
@@ -53,34 +49,6 @@ namespace Server.Controllers
             };
 
             return Ok(authResponse);
-        }
-
-        private string GenerateJwtToken(User user)
-        {
-            var jwtSettings = _configuration.GetSection("Jwt");
-            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
-
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Role, user.Role.ToString()) 
-            };
-
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpirationMinutes"])),
-                Audience = jwtSettings["Audience"], 
-                 Issuer = jwtSettings["Issuer"],    
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-
-            };
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
         }
     }
 }
