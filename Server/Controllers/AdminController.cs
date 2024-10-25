@@ -1,8 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Server.Data;
-using System.Threading.Tasks;
 
 namespace Server.Controllers
 {
@@ -11,110 +8,67 @@ namespace Server.Controllers
     [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly UserService _userService;
 
-        public AdminController(ApplicationDbContext context)
+        public AdminController(UserService userService)
         {
-            _context = context;
+            _userService = userService;
         }
 
         [HttpGet("Get-All-Employee")]
         public async Task<IActionResult> GetUsers()
         {
-            var users = await _context.Users.ToListAsync();
-
-            var userDtos = users.Select(user => new UserDto
-            {
-                Id = user.Id,
-                FullName = user.FullName,
-                UserName = user.UserName,
-                Email = user.Email,
-                Role = user.Role.ToString(), 
-                Departamento = user.Departamento
-            }).ToList();
-
-            return Ok(userDtos);
-        }   
+            var employees = await _userService.GetAllEmployees();
+            return Ok(employees);
+        }
 
         [HttpGet("Get-Employee/{id}")]
         public async Task<IActionResult> GetUserById(int id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var employee = await _userService.GetEmployeeById(id);
 
-            if (user == null)
+            if (employee == null) {
                 return NotFound(new { message = "Usuario no encontrado." });
+            }
 
-            var userDto = new UserDto
-            {
-                Id = user.Id,
-                FullName = user.FullName,
-                UserName = user.UserName,
-                Email = user.Email,
-                PasswordHash = user.PasswordHash,
-                Role = user.Role.ToString(),  
-                Departamento = user.Departamento
-            };
-
-            return Ok(userDto);
+            return Ok(employee);
         }
 
         [HttpPost("Create-Employee")]
         public async Task<IActionResult> CreateUser([FromBody] RegisterDto registerDto)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid) {
                 return BadRequest(ModelState);
+            }
 
-            var newUser = new User
-            {
-
-                FullName = registerDto.FullName,
-                UserName = registerDto.UserName,
-                Email = registerDto.Email,
-                PasswordHash = registerDto.Password, 
-                Role = (UserRole)Enum.Parse(typeof(UserRole), registerDto.Role), 
-                Departamento = registerDto.Departamento
-            };
-
-            _context.Users.Add(newUser);
-            await _context.SaveChangesAsync();
-
+            var newUser = await _userService.CreateEmployee(registerDto);
             return CreatedAtAction(nameof(GetUserById), new { id = newUser.Id }, newUser);
         }
 
         [HttpPut("Update-Employee/{id}")]
         public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto updateUserDto)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid){
                 return BadRequest(ModelState);
+            }
 
-            var user = await _context.Users.FindAsync(id);
+            var result = await _userService.UpdateEmployee(id, updateUserDto);
 
-            if (user == null)
+            if (!result){
                 return NotFound(new { message = "Usuario no encontrado." });
+            }
 
-            user.FullName = updateUserDto.FullName;
-            user.UserName = updateUserDto.UserName;
-            user.Email = updateUserDto.Email;
-            user.Departamento = updateUserDto.Departamento;
-            user.Role = (UserRole)Enum.Parse(typeof(UserRole), updateUserDto.Role.ToString());
-            user.PasswordHash = updateUserDto.PasswordHash; 
-
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
-
-            return NoContent(); 
+            return NoContent();
         }
 
         [HttpDelete("Delete-Employee/{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
-            var user = await _context.Users.FindAsync(id);
+            var result = await _userService.DeleteEmployee(id);
 
-            if (user == null)
+            if (!result){
                 return NotFound(new { message = "Usuario no encontrado." });
-
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            }
 
             return NoContent();
         }
