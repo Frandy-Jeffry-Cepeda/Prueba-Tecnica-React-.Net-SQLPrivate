@@ -1,0 +1,40 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Archivos de compilación y binarios
+bin/
+obj/
+
+# Archivos de configuración y settings locales
+*.config
+*.csproj.user
+Server.csproj.user
+
+# Archivos de logs
+*.log
+
+# Archivos de publicación
+publish/
+
+# Archivos generados automáticamente por IDE o herramientas
+*.DS_Store
+*.vscode/
+*.coverage
+*.cache
+*.out
+
+# Archivos de paquetes
+node_modules/
+packages/
+
+# Archivos temporales
+*.tmp
+*.swp
+
+# Migraciones y otros archivos generados automáticamente por herramientas de base de datos
+Migrations/
+
+# Archivo de metadatos
+server.metadata.v8.bin
